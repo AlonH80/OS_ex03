@@ -4,12 +4,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include "logger.h"
 
 #define MAX_STRING 100
-#define MIN(x, y) (((x) < (y)) ? (x):(y))
 
-void runSubstLoop(char charToPut, char charToReplace);
+
+void runSubstLoop(char charToReplace, char charToPut);
 void substituteChar(char* string, char charToReplace, char charToPut);
-void multipleCharReplaces(char* string, char* charsToReplace, char* charsToPut);
+//void multipleCharReplaces(char* string, char* charsToReplace, char* charsToPut);
+//void openLog();
+//void closeLog();
+//void writeToLog(char* str);
+
 
 #endif
