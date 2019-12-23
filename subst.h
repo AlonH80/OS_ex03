@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "logger.h"
-
 #define MAX_STRING 100
 
 

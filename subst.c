@@ -1,22 +1,18 @@
 #include "subst.h"
 
 void runSubstLoop(char charToReplace, char charToPut){
-    openLog();
-    writeToLog("Start loop..\n");
-    closeLog();
-    while(!feof(stdin)){
-        char* string = (char*)malloc(MAX_STRING);
+    char* string = (char*)malloc(MAX_STRING);
+    while(1){
+        string[0] = '\0';
         fgets(string, MAX_STRING, stdin);
-        string[strlen(string) - 1] = '\0';
         substituteChar(string, charToReplace, charToPut);
-        printf("%s\n", string);
-        free(string);
+        dprintf(STDOUT_FILENO, "%s", string);
+        if (string[0] == '\0'){
+            break;
+        }
     }
 
-    printf("Bye bye!\n");
-    //closeLog();
-    //close(STDIN_FILENO);
-    //close(STDOUT_FILENO);
+    free(string);
 }
 
 void substituteChar(char* string, char charToReplace, char charToPut){
@@ -27,16 +23,6 @@ void substituteChar(char* string, char charToReplace, char charToPut){
         }
     }
 }
-
-//void multipleCharReplaces(char* string, char* charsToReplace, char* charsToPut){
-//    int len = MIN(strlen(charsToPut), strlen(charsToReplace));
-//    int i;
-//    for( i = 0; i < len; ++i){
-//        // fork + execv to replace chars
-//        substituteChar(string, charsToReplace[i], charsToPut[i]);
-//    }
-//}
-
 
 int main(int argc, char** argv) {
     runSubstLoop(argv[1][0], argv[2][0]);

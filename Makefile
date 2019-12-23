@@ -9,23 +9,23 @@ else
 	EXT=
 endif
 
-PROG_OBJS=pipeSystem.o logger.o
+PROG_OBJS=pipeSystem.o
 MAIN_FILE=ex3_q1
 PROG=$(MAIN_FILE)$(EXT)
+
+all:$(PROG) test
 
 $(PROG): $(PROG_OBJS) subst
 	@$(ECHO)
 	$(CC) -o $(PROG) $(CFLAGS) $(PROG_OBJS)
 
-subst: subst.o logger.o
+subst: subst.o
 	@$(ECHO)
-	$(CC) -o subst $(CFLAGS) subst.o logger.o
+	$(CC) -o subst $(CFLAGS) subst.o
 
 %.o: %.c
 	@$(ECHO)
 	$(CC) $(CFLAGS) -c $<
-
-all:$(PROG) test
 
 test:
 	@echo going to run test...
