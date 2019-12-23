@@ -3,7 +3,7 @@
 
 int openFile(const char* fileName){
     int fd;
-    fd = open(fileName, O_RDWR|O_CREAT|O_APPEND, S_IRUSR | S_IWUSR);
+    fd = open(fileName, O_RDWR|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd < 0)
     {
         fprintf(stderr, "ERROR: open \"%s\" failed (%d). Exiting\n", fileName, fd);
@@ -58,7 +58,6 @@ void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* ou
         int** pipes = generatePipes(len);
         for(i = 0; i < len; ++i){
             char** args = generateArgs(charsToReplace[i], charsToPut[i]);
-            args[0] = SUBST_PROG_NAME;
             createMidSubstProgram(args, pipes[i][0], pipes[i + 1][1]);
             free(args);
         }
@@ -68,11 +67,12 @@ void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* ou
             close(pipes[i][1]);
         }
     }
-    else{
+    else {
         char** args = generateArgs(charsToReplace[0], charsToPut[0]);
         createMidSubstProgram(args, STDIN_FILENO, STDOUT_FILENO);
-        free(args);
         wait(NULL); // Wait for first program to end
+        free(args);
+        close(STDOUT_FILENO);
     }
 
 //    char** firstArgs = generateArgs(charsToReplace[0], charsToPut[0]);
@@ -97,6 +97,7 @@ void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* ou
 
 char** generateArgs(char charToReplace, char charToPut){
     char** args = (char**)malloc(sizeof(char*) * 4);
+    args[0] = SUBST_PROG_NAME;
     args[1] = (char*)malloc(2);
     args[2] = (char*)malloc(2);
     args[3] = NULL;
