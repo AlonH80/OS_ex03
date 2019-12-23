@@ -117,14 +117,14 @@ int** generatePipes(int numOfPipes){
     int i;
     pipes[0] = (int*)malloc(sizeof(int) * 2);
     pipes[0][0] = STDIN_FILENO;
-    pipes[0][1] = NULL;
+    pipes[0][1] = -1;
     for(i = 1;i < numOfPipes; ++i){
         pipes[i] = (int*)malloc(sizeof(int) * 2);
         createPipe(pipes[i]);
     }
 
     pipes[numOfPipes] = (int*)malloc(sizeof(int) * 2);
-    pipes[numOfPipes][0] = NULL;
+    pipes[numOfPipes][0] = -1;
     pipes[numOfPipes][1] = STDOUT_FILENO;
 
     return pipes;
