@@ -13,14 +13,18 @@
 #define MIN(x, y) (((x) < (y)) ? (x):(y))
 typedef char BOOL;
 
+int** pipes;
+int len;
+
 void redirectStdout(int);
 void redirectStdin(int);
 void createPipe(int[]);
-int createMidSubstProgram(char**, int, int);
+int createMidSubstProgram(char**, int);
 void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* outFile);
 char** generateArgs(char charToReplace, char charToPut);
 void freeGeneratedArgs(char** args);
-int** generatePipes(int);
+void generatePipes();
+void closeAllPipesFrom(int pipeIndex);
 int openFile(const char* fileName);
 //void runProgramLoop(char** args);
 

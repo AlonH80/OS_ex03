@@ -2,15 +2,19 @@
 
 void runSubstLoop(char charToReplace, char charToPut){
     char* string = (char*)malloc(MAX_STRING);
-    while(1){
-        string[0] = '\0';
-        fgets(string, MAX_STRING, stdin);
+    int inputEnded = 0, i;
+    int strLen = read(STDIN_FILENO, string, MAX_STRING);
+    while(strLen > 0){
         substituteChar(string, charToReplace, charToPut);
         dprintf(STDOUT_FILENO, "%s", string);
-        if (string[0] == '\0'){
-            break;
+        for (i = 0; i < strLen; ++i){
+            string[i] = 0;
         }
+
+        strLen = read(STDIN_FILENO, string, MAX_STRING);
     }
+    close(STDOUT_FILENO);
+    close(STDIN_FILENO);
 
     free(string);
 }
@@ -22,6 +26,16 @@ void substituteChar(char* string, char charToReplace, char charToPut){
             string[i] = charToPut;
         }
     }
+}
+
+int getLine(char* string){
+    char currChar;
+    int len = 0;
+    do {
+        currChar = getc(stdin);
+        string[len++] = currChar;
+    } while(currChar != '\n' && currChar != EOF);
+    return currChar == EOF;
 }
 
 int main(int argc, char** argv) {
