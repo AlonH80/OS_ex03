@@ -2,7 +2,7 @@
 
 void runSubstLoop(char charToReplace, char charToPut){
     char* string = (char*)malloc(MAX_STRING);
-    int inputEnded = 0, i;
+    int i;
     int strLen = read(STDIN_FILENO, string, MAX_STRING);
     while(strLen > 0){
         substituteChar(string, charToReplace, charToPut);

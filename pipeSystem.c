@@ -76,7 +76,6 @@ void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* ou
 
     for (i = 0; i < len; ++i){
         waitpid(pids[i], NULL, 0);
-        printf("pid: %d finished\n", pids[i]);
     }
 }
 
