@@ -7,42 +7,31 @@ int prodsIn = TOTAL_MSG;
 int prodsOut = TOTAL_MSG;
 sem_t* semInBuff;
 sem_t* semOutBuff;
+sem_t* semNumOfThreads;
 pthread_mutex_t ioLock;
 pthread_mutex_t buffLock;
 pthread_mutex_t getBuffLock;
 pthread_mutex_t putBuffLock;
 pthread_mutex_t assignIdProd;
 pthread_mutex_t assignIdCons;
+pthread_cond_t waitBuff;
 int numProducers = 0;
 int numConsumers = 0;
+int waitBufferFull = 0;
+int waitBufferEmpty = 0;
 
 void initProgram(){
+    initializeBuffer();
     pthread_mutex_init(&ioLock, NULL);
     pthread_mutex_init(&buffLock, NULL);
     pthread_mutex_init(&getBuffLock, NULL);
     pthread_mutex_init(&putBuffLock, NULL);
     pthread_mutex_init(&assignIdProd, NULL);
     pthread_mutex_init(&assignIdCons, NULL);
-    if (sem_unlink("/inBuff") == 0){
-        fprintf(stderr, "successul unlink of /inBuff\n");
-    }
-    if (sem_unlink("/outBuff") == 0){
-        fprintf(stderr, "successul unlink of /outBuff\n");
-    }
+    pthread_cond_init(&waitBuff, NULL);
 
-    semInBuff = sem_open("/inBuff", O_CREAT, S_IRWXU, 0);
-    if (semInBuff == SEM_FAILED)
-    {
-        perror("failed to open semaphore /inBuff\n");
-        exit(EXIT_FAILURE);
-    }
-
-    semOutBuff = sem_open("outBuff", O_CREAT, S_IRWXU, 0);
-    if (semOutBuff == SEM_FAILED)
-    {
-        perror("failed to open semaphore /outBuff\n");
-        exit(EXIT_FAILURE);
-    }
+    semUnlinker();
+    semInitializer();
 }
 
 void endProgram(){
@@ -52,15 +41,52 @@ void endProgram(){
     pthread_mutex_destroy(&putBuffLock);
     pthread_mutex_destroy(&assignIdProd);
     pthread_mutex_destroy(&assignIdCons);
+    pthread_cond_destroy(&waitBuff);
+
+    semUnlinker();
+    sem_close(semInBuff);
+    sem_close(semOutBuff);
+    sem_close(semNumOfThreads);
+}
+
+void semUnlinker(){
     if (sem_unlink("/inBuff") == 0){
         fprintf(stderr, "successul unlink of /inBuff\n");
     }
     if (sem_unlink("/outBuff") == 0){
         fprintf(stderr, "successul unlink of /outBuff\n");
     }
+    if (sem_unlink("/numOfThreads") == 0){
+        fprintf(stderr, "successul unlink of /numOfThreads\n");
+    }
+}
 
-    sem_close(semInBuff);
-    sem_close(semOutBuff);
+void semInitializer(){
+    semInBuff = sem_open("/inBuff", O_CREAT, S_IRWXU, 0);
+    if (semInBuff == SEM_FAILED)
+    {
+        perror("failed to open semaphore /inBuff\n");
+        exit(EXIT_FAILURE);
+    }
+    semOutBuff = sem_open("/outBuff", O_CREAT, S_IRWXU, 0);
+    if (semOutBuff == SEM_FAILED)
+    {
+        perror("failed to open semaphore /outBuff\n");
+        exit(EXIT_FAILURE);
+    }
+    semNumOfThreads = sem_open("/numOfThreads", O_CREAT, S_IRWXU, 0);
+    if (semOutBuff == SEM_FAILED)
+    {
+        perror("failed to open semaphore /numOfThreads\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void initializeBuffer(){
+    int i;
+    for (i = 0; i < BUF_SIZE; ++i){
+        buffer[i] = -1;
+    }
 }
 
 pthread_t* createConsumers(){
@@ -75,7 +101,7 @@ pthread_t* createThreads(int numOfThreads, void* (*f)()){
     int i;
     pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * numOfThreads);
     for (i = 0; i < numOfThreads; ++i){
-        pthread_create(threads + i, NULL, f, NULL);
+        pthread_create(&threads[i], NULL, f, NULL);
     }
 
     return threads;
@@ -120,6 +146,11 @@ void programLoop(){
     printf(CONSUMERS_CREATED_STRING);
     pthread_mutex_unlock(&ioLock);
 
+    int i;
+    for (i = 0; i < N_PROD + N_CONS; ++i){
+        sem_post(semNumOfThreads);
+    }
+
     pthread_create(&prodWait, NULL, waitForProducers, producers);
     pthread_create(&consWait, NULL, waitForConsumers, consumers);
     pthread_join(prodWait, NULL);
@@ -130,12 +161,12 @@ void programLoop(){
 
 void generatePrimesProd(int threadId){
     lluint n1 = get_random_in_range();
-    while(!is_prime(n1) && prodsIn > 0){
+    while(!is_prime(n1)){
         n1 = get_random_in_range();
     }
 
     lluint n2 = get_random_in_range();
-    while(!is_prime(n2) && prodsIn > 0){
+    while(!is_prime(n2)){
         n2 = get_random_in_range();
     }
     lluint prod = n1 * n2;
@@ -153,33 +184,35 @@ void generatePrimesProd(int threadId){
 }
 
 void add_to_buf(lluint prod){
-
-    if (inBuffer == BUF_SIZE){
-        sem_wait(semOutBuff);
-    }
-
     pthread_mutex_lock(&buffLock);
+    while (inBuffer == BUF_SIZE){
+        waitBufferFull = 1;
+        pthread_cond_wait(&waitBuff, &buffLock);
+        // cond_wait may accidentally release wait
+    }
     buffer[inBuffer++] = prod;
-    if (inBuffer == 1){
-        sem_post(semInBuff);
+    if (inBuffer == 1 && waitBufferEmpty == 1){
+        waitBufferEmpty = 0;
+        pthread_cond_signal(&waitBuff);
     }
     pthread_mutex_unlock(&buffLock);
-
     --prodsIn;
 }
 
 void remove_from_buf(lluint* prod){
-
-    if(inBuffer == 0){
-        sem_wait(semInBuff);
-    }
     pthread_mutex_lock(&buffLock);
+    while (inBuffer == 0){
+        waitBufferEmpty = 1;
+        pthread_cond_wait(&waitBuff, &buffLock);
+        // cond_wait may accidentally release wait
+    }
     pthread_mutex_lock(&ioLock);
     printf("consumer inBuffer = %d\n", inBuffer);
     pthread_mutex_unlock(&ioLock);
     (*prod) = buffer[--inBuffer];
-    if (inBuffer == BUF_SIZE - 1){
-        sem_post(semOutBuff);
+    if (inBuffer == BUF_SIZE - 1 && waitBufferFull == 1){
+        waitBufferFull = 0;
+        pthread_cond_signal(&waitBuff);
     }
 
     pthread_mutex_unlock(&buffLock);
@@ -189,16 +222,15 @@ void remove_from_buf(lluint* prod){
 }
 
 void* consumerLoop(){
+    sem_wait(semNumOfThreads);
     pthread_mutex_lock(&assignIdCons);
     int threadId = ++numConsumers;
     pthread_mutex_unlock(&assignIdCons);
-
-    lluint currProd = 0, n1, n2, dontBother = 0;
-
+    lluint currProd = 0, n1, n2;
 
     char* whoAmI = (char*)malloc(20);
     sprintf(whoAmI, "consumer #%d", threadId);
-    while(prodsOut > 0){
+    while(1){
         pthread_mutex_lock(&getBuffLock);
         if(prodsOut > 0) {
             remove_from_buf(&currProd);
@@ -208,17 +240,16 @@ void* consumerLoop(){
             pthread_mutex_unlock(&ioLock);
         }
         else{
-            dontBother = 1;
+            pthread_mutex_unlock(&getBuffLock);
+            break;
         }
         pthread_mutex_unlock(&getBuffLock);
 
-        if(!dontBother) {
-            find_two_factors(currProd, &n1, &n2);
+        find_two_factors(currProd, &n1, &n2);
+        pthread_mutex_lock(&ioLock);
+        write_product(whoAmI, n1, n2, currProd);
+        pthread_mutex_unlock(&ioLock);
 
-            pthread_mutex_lock(&ioLock);
-            write_product(whoAmI, n1, n2, currProd);
-            pthread_mutex_unlock(&ioLock);
-        }
     }
 
     free(whoAmI);
@@ -230,6 +261,7 @@ void* consumerLoop(){
 }
 
 void* producerLoop(){
+    sem_wait(semNumOfThreads);
     pthread_mutex_lock(&assignIdProd);
     int threadId = ++numProducers;
     pthread_mutex_unlock(&assignIdProd);

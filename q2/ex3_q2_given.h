@@ -4,10 +4,10 @@
 // #define RAND_LO      1000 * 1000 * 1000     
 // #define RAND_HI      1100 * 1000 * 1000     
 
-#define N_PROD          9   // number of producer threads
-#define N_CONS          2   // number of consumer threads
-#define BUF_SIZE        3   // size of the buffer
-#define TOTAL_MSG       15   // total number of messages to create
+#define N_PROD          2   // number of producer threads
+#define N_CONS          3   // number of consumer threads
+#define BUF_SIZE        4   // size of the buffer
+#define TOTAL_MSG       7   // total number of messages to create
 
 #define SLEEP_FACTOR    200  // used by my_sleep
 

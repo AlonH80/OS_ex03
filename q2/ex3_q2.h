@@ -1,3 +1,8 @@
+//TODO: Remove "inBufer" debug line
+//TODO: Buffer should be cyclic queue
+//TODO: Seperate to files
+//TODO: Go over makefile
+
 
 #ifndef EX3_Q2_H
 #define EX3_Q2_H
@@ -25,6 +30,9 @@ void* waitForProducers(void* producers);
 void* waitForConsumers(void* consumers);
 void initProgram();
 void endProgram();
+void initializeBuffer();
+void semUnlinker();
+void semInitializer();
 void* consumerLoop();
 void* producerLoop();
 void generatePrimesProd(int);

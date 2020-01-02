@@ -9,19 +9,21 @@ else
 	EXT=
 endif
 
-PROG_OBJS=pipeSystem.o
+PROG_OBJS=ex3_q1.o
 MAIN_FILE=ex3_q1
+SECONDARY_FILE=subst
 PROG=$(MAIN_FILE)$(EXT)
+SECONDARY_PROG=$(SECONDARY_FILE)$(EXT)
 
 all:$(PROG) test
 
-$(PROG): $(PROG_OBJS) subst
+$(PROG): $(PROG_OBJS) $(SECONDARY_PROG)
 	@$(ECHO)
 	$(CC) -o $(PROG) $(CFLAGS) $(PROG_OBJS)
 
-subst: subst.o
+$(SECONDARY_PROG): $(SECONDARY_FILE).o
 	@$(ECHO)
-	$(CC) -o subst $(CFLAGS) subst.o
+	$(CC) -o $(SECONDARY_PROG) $(CFLAGS) $(SECONDARY_FILE).o
 
 %.o: %.c
 	@$(ECHO)

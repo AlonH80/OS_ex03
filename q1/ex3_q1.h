@@ -1,3 +1,6 @@
+//TODO: Try to implement with single pipe
+//TODO: Go over makefile
+
 
 #ifndef PIPESYSTEM_H
 #define PIPESYSTEM_H
