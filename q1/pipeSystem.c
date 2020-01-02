@@ -71,7 +71,7 @@ void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* ou
         close(pipes[i][0]);
         close(pipes[i][1]);
         free(pipes[i]);
-        free(args);
+        freeGeneratedArgs(args);
     }
 
     for (i = 0; i < len; ++i){
@@ -91,8 +91,8 @@ char** generateArgs(char charToReplace, char charToPut){
 }
 
 void freeGeneratedArgs(char** args){
-//    free(args[0]);
-//    free(args[1]);
+    free(args[1]);
+    free(args[2]);
     free(args);
 }
 
