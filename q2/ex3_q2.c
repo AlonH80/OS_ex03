@@ -1,26 +1,13 @@
 
 #include "ex3_q2.h"
+#include "globals.h"
 
-lluint buffer[BUF_SIZE];
-lluint inBuffer = 0;
-int prodsIn = TOTAL_MSG;
-int prodsOut = TOTAL_MSG;
-sem_t* semInBuff;
-sem_t* semOutBuff;
-sem_t* semNumOfThreads;
-pthread_mutex_t ioLock;
-pthread_mutex_t buffLock;
-pthread_mutex_t getBuffLock;
-pthread_mutex_t putBuffLock;
-pthread_mutex_t assignIdProd;
-pthread_mutex_t assignIdCons;
-pthread_cond_t waitBuff;
-int numProducers = 0;
-int numConsumers = 0;
-int waitBufferFull = 0;
-int waitBufferEmpty = 0;
 
 void initProgram(){
+    prodsIn = TOTAL_MSG;
+    prodsOut = TOTAL_MSG;
+    numConsumers = 0;
+    numProducers = 0;
     initializeBuffer();
     pthread_mutex_init(&ioLock, NULL);
     pthread_mutex_init(&buffLock, NULL);
@@ -85,16 +72,8 @@ void semInitializer(){
 void initializeBuffer(){
     int i;
     for (i = 0; i < BUF_SIZE; ++i){
-        buffer[i] = -1;
+        buffer[i] = EMPTY_SPOT;
     }
-}
-
-pthread_t* createConsumers(){
-    return createThreads(N_CONS, consumerLoop);
-}
-
-pthread_t* createProducers(){
-    return createThreads(N_PROD, producerLoop);
 }
 
 pthread_t* createThreads(int numOfThreads, void* (*f)()){
@@ -105,22 +84,6 @@ pthread_t* createThreads(int numOfThreads, void* (*f)()){
     }
 
     return threads;
-}
-
-void* waitForProducers(void* producers){
-    threadsWaiter(producers, N_PROD);
-    pthread_mutex_lock(&ioLock);
-    printf(PRODUCERS_ENDED);
-    pthread_mutex_unlock(&ioLock);
-    return NULL;
-}
-
-void* waitForConsumers(void* consumers){
-    threadsWaiter(consumers, N_CONS);
-    pthread_mutex_lock(&ioLock);
-    printf(CONSUMERS_ENDED);
-    pthread_mutex_unlock(&ioLock);
-    return NULL;
 }
 
 void threadsWaiter(pthread_t* threads, int numOfThreads){
@@ -159,39 +122,16 @@ void programLoop(){
     endProgram();
 }
 
-void generatePrimesProd(int threadId){
-    lluint n1 = get_random_in_range();
-    while(!is_prime(n1)){
-        n1 = get_random_in_range();
-    }
-
-    lluint n2 = get_random_in_range();
-    while(!is_prime(n2)){
-        n2 = get_random_in_range();
-    }
-    lluint prod = n1 * n2;
-
-    pthread_mutex_lock(&putBuffLock);
-    if (prodsIn > 0) {
-        pthread_mutex_lock(&ioLock);
-        write_add_to_buf_msg(threadId, n1, n2, prod);
-        pthread_mutex_unlock(&ioLock);
-
-        add_to_buf(prod);
-    }
-    pthread_mutex_unlock(&putBuffLock);
-
-}
-
 void add_to_buf(lluint prod){
     pthread_mutex_lock(&buffLock);
-    while (inBuffer == BUF_SIZE){
+    while (buffer[nextInBuffer] != EMPTY_SPOT){
         waitBufferFull = 1;
         pthread_cond_wait(&waitBuff, &buffLock);
         // cond_wait may accidentally release wait
     }
-    buffer[inBuffer++] = prod;
-    if (inBuffer == 1 && waitBufferEmpty == 1){
+    buffer[nextInBuffer++] = prod;
+    nextInBuffer %= BUF_SIZE;
+    if ((nextInBuffer - 1) % BUF_SIZE == nextOutBuffer && waitBufferEmpty == 1){
         waitBufferEmpty = 0;
         pthread_cond_signal(&waitBuff);
     }
@@ -201,16 +141,19 @@ void add_to_buf(lluint prod){
 
 void remove_from_buf(lluint* prod){
     pthread_mutex_lock(&buffLock);
-    while (inBuffer == 0){
+    while (nextInBuffer == nextOutBuffer){
         waitBufferEmpty = 1;
         pthread_cond_wait(&waitBuff, &buffLock);
         // cond_wait may accidentally release wait
     }
     pthread_mutex_lock(&ioLock);
-    printf("consumer inBuffer = %d\n", inBuffer);
+    //printf("consumer inBuffer = %d\n", nextInBuffer);
     pthread_mutex_unlock(&ioLock);
-    (*prod) = buffer[--inBuffer];
-    if (inBuffer == BUF_SIZE - 1 && waitBufferFull == 1){
+    (*prod) = buffer[nextOutBuffer];
+    buffer[nextOutBuffer] = EMPTY_SPOT;
+    nextOutBuffer = (nextOutBuffer + 1) % BUF_SIZE;
+
+    if ((nextOutBuffer - 1) % BUF_SIZE == nextInBuffer && waitBufferFull == 1){
         waitBufferFull = 0;
         pthread_cond_signal(&waitBuff);
     }
@@ -260,6 +203,18 @@ void* consumerLoop(){
     return NULL;
 }
 
+pthread_t* createConsumers(){
+    return createThreads(N_CONS, consumerLoop);
+}
+
+void* waitForConsumers(void* consumers){
+    threadsWaiter(consumers, N_CONS);
+    pthread_mutex_lock(&ioLock);
+    printf(CONSUMERS_ENDED);
+    pthread_mutex_unlock(&ioLock);
+    return NULL;
+}
+
 void* producerLoop(){
     sem_wait(semNumOfThreads);
     pthread_mutex_lock(&assignIdProd);
@@ -271,6 +226,42 @@ void* producerLoop(){
     }
     pthread_mutex_lock(&ioLock);
     write_producer_is_done(threadId);
+    pthread_mutex_unlock(&ioLock);
+    return NULL;
+}
+
+void generatePrimesProd(int threadId){
+    lluint n1 = get_random_in_range();
+    while(!is_prime(n1)){
+        n1 = get_random_in_range();
+    }
+
+    lluint n2 = get_random_in_range();
+    while(!is_prime(n2)){
+        n2 = get_random_in_range();
+    }
+    lluint prod = n1 * n2;
+
+    pthread_mutex_lock(&putBuffLock);
+    if (prodsIn > 0) {
+        pthread_mutex_lock(&ioLock);
+        write_add_to_buf_msg(threadId, n1, n2, prod);
+        pthread_mutex_unlock(&ioLock);
+
+        add_to_buf(prod);
+    }
+    pthread_mutex_unlock(&putBuffLock);
+
+}
+
+pthread_t* createProducers(){
+    return createThreads(N_PROD, producerLoop);
+}
+
+void* waitForProducers(void* producers){
+    threadsWaiter(producers, N_PROD);
+    pthread_mutex_lock(&ioLock);
+    printf(PRODUCERS_ENDED);
     pthread_mutex_unlock(&ioLock);
     return NULL;
 }

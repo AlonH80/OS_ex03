@@ -9,7 +9,7 @@ else
 	EXT=
 endif
 
-PROG_OBJS=ex3_q2.o ex3_q2_given.o producer.o consumer.o
+PROG_OBJS=ex3_q2.o ex3_q2_given.o
 MAIN_FILE=ex3_q2
 PROG=$(MAIN_FILE)$(EXT)
 
@@ -28,5 +28,4 @@ test:
 	./ex3_q2  > out.log 2> err.log
 
 clean:
-	rm -vf *.o *.gch $(PROG) *.log *.tmp
-	rm -vrf ex3_q2.dSYM
+	rm -vf *.o $(PROG) *.log *.tmp

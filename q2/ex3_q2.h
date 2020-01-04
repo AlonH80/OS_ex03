@@ -1,7 +1,5 @@
 //TODO: Remove "inBufer" debug line
-//TODO: Buffer should be cyclic queue
-//TODO: Seperate to files
-//TODO: Go over makefile
+//TODO: Insert comments
 
 
 #ifndef EX3_Q2_H
@@ -20,21 +18,24 @@
 #define CONSUMERS_CREATED_STRING "main thread created all consumer threads\n"
 #define CONSUMERS_ENDED "all consumers terminated\n"
 #define PRODUCERS_ENDED "all producers terminated\n"
+#define EMPTY_SPOT -1
 
 void programLoop();
 pthread_t* createThreads(int numOfThreads, void* (*f)());
-pthread_t* createConsumers();
-pthread_t* createProducers();
 void threadsWaiter(pthread_t* threads, int numOfThreads);
-void* waitForProducers(void* producers);
-void* waitForConsumers(void* consumers);
 void initProgram();
 void endProgram();
 void initializeBuffer();
 void semUnlinker();
 void semInitializer();
+
 void* consumerLoop();
+pthread_t* createConsumers();
+void* waitForConsumers(void* consumers);
+
 void* producerLoop();
-void generatePrimesProd(int);
+void generatePrimesProd(int threadId);
+pthread_t* createProducers();
+void* waitForProducers(void* producers);
 
 #endif
