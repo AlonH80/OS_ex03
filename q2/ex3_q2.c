@@ -16,6 +16,7 @@ void initProgram(){
     pthread_mutex_init(&assignIdProd, NULL);
     pthread_mutex_init(&assignIdCons, NULL);
     pthread_cond_init(&waitBuff, NULL);
+    srand(time(0));
 
     semUnlinker();
     semInitializer();
