@@ -1,6 +1,3 @@
-//TODO: Try to implement with single pipe
-//TODO: Go over makefile
-
 
 #ifndef PIPESYSTEM_H
 #define PIPESYSTEM_H
@@ -11,25 +8,22 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define SUBST_PROG_NAME "subst"
 #define MIN(x, y) (((x) < (y)) ? (x):(y))
 typedef char BOOL;
 
-int** pipes;
-int len;
-
+int openFile(const char* fileName);
 void redirectStdout(int);
 void redirectStdin(int);
 void createPipe(int[]);
-int createMidSubstProgram(char**, int);
+int createSubstProgram(char**, int);
 void createSubstProcesses(char* charsToReplace, char* charsToPut, const char* outFile);
 char** generateArgs(char charToReplace, char charToPut);
 void freeGeneratedArgs(char** args);
 void generatePipes();
 void closeAllPipesFrom(int pipeIndex);
-int openFile(const char* fileName);
-//void runProgramLoop(char** args);
-
 
 #endif

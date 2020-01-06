@@ -17,11 +17,11 @@ all:$(PROG) test
 
 $(PROG): $(PROG_OBJS)
 	@$(ECHO)
-	$(CC) -o $(PROG) $(CFLAGS) $(PROG_OBJS)
+	$(CC) -o $(PROG) $(CFLAGS) $^
 
 %.o: %.c
 	@$(ECHO)
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $^
 
 test:
 	@echo going to run test...

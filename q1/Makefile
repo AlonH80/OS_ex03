@@ -23,15 +23,15 @@ $(PROG): $(PROG_OBJS) $(SECONDARY_PROG)
 
 $(SECONDARY_PROG): $(SECONDARY_FILE).o
 	@$(ECHO)
-	$(CC) -o $(SECONDARY_PROG) $(CFLAGS) $(SECONDARY_FILE).o
+	$(CC) -o $(SECONDARY_PROG) $(CFLAGS) $^
 
 %.o: %.c
 	@$(ECHO)
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $^
 
 test:
 	@echo going to run test...
 	./ex3_q1 abc xyz out.log < in.txt 2> err.log
 
 clean:
-	rm -vf *.o *.gch subst $(PROG) *.log *.tmp
+	rm -vf *.o $(SECONDARY_FILE) $(PROG) *.log *.tmp
