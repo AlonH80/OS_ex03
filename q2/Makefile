@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=gnu11 -pthread
+CFLAGS=-Wall -std=gnu11
 LDFLAGS=-lm
 CC=gcc -std=c99 -g
 ECHO=echo "going to compile for target $@"

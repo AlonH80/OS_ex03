@@ -8,7 +8,7 @@ void runSubstLoop(char charToReplace, char charToPut){
     int strLen = read(STDIN_FILENO, string, MAX_STRING);
     while(strLen > 0){
         substituteChar(string, charToReplace, charToPut);
-        dprintf(STDOUT_FILENO, "%s", string);
+        write(STDOUT_FILENO, string, strLen);
         for (i = 0; i < strLen; ++i){
             string[i] = 0;
         }
