@@ -131,43 +131,14 @@ void endProgram(){
 }
 
 void add_to_buf(lluint prod){
-    pthread_mutex_lock(&buffLock);
-    while (buffer[nextInBuffer] != EMPTY_SPOT){
-        waitBufferFull = 1;
-        pthread_cond_wait(&waitBuff, &buffLock);
-        // cond_wait may accidentally release wait
-    }
     buffer[nextInBuffer++] = prod;
     nextInBuffer %= BUF_SIZE;
-    if (waitBufferEmpty == 1){
-        waitBufferEmpty = 0;
-        pthread_cond_signal(&waitBuff);
-    }
-    pthread_mutex_unlock(&buffLock);
-    --prodsIn;
 }
 
 void remove_from_buf(lluint* prod){
-    pthread_mutex_lock(&buffLock);
-    while (nextInBuffer == nextOutBuffer){
-        waitBufferEmpty = 1;
-        pthread_cond_wait(&waitBuff, &buffLock);
-        // cond_wait may accidentally release wait
-    }
-    pthread_mutex_lock(&ioLock);
-    pthread_mutex_unlock(&ioLock);
     (*prod) = buffer[nextOutBuffer];
     buffer[nextOutBuffer] = EMPTY_SPOT;
     nextOutBuffer = (nextOutBuffer + 1) % BUF_SIZE;
-    if (waitBufferFull == 1){
-        waitBufferFull = 0;
-        pthread_cond_signal(&waitBuff);
-    }
-
-    pthread_mutex_unlock(&buffLock);
-
-    --prodsOut;
-
 }
 
 pthread_t* createConsumers(){
@@ -200,7 +171,6 @@ void* consumerLoop(){
     pthread_mutex_lock(&assignIdCons);
     consId = ++numConsumers;
     pthread_mutex_unlock(&assignIdCons);
-
     whoAmI = (char*)malloc(20);
     sprintf(whoAmI, "consumer #%d", consId);
     while(!isDone){
@@ -221,11 +191,24 @@ BOOL consumeNumber(int consId, char* whoAmI){
 
     pthread_mutex_lock(&getBuffLock);
     if(prodsOut > 0) {
+        pthread_mutex_lock(&buffLock);
+        while (buffer[nextOutBuffer] == EMPTY_SPOT){
+            waitBufferEmpty = 1;
+            pthread_cond_wait(&waitBuff, &buffLock);
+            // cond_wait may accidentally release wait
+        }
         remove_from_buf(&currProd);
+        if (waitBufferFull == 1){
+            waitBufferFull = 0;
+            pthread_cond_signal(&waitBuff);
+        }
+        pthread_mutex_unlock(&buffLock);
+        --prodsOut;
 
         pthread_mutex_lock(&ioLock);
         write_remove_from_buf_msg(consId, &currProd);
         pthread_mutex_unlock(&ioLock);
+
         pthread_mutex_unlock(&getBuffLock);
 
         find_two_factors(currProd, &n1, &n2);
@@ -293,14 +276,25 @@ void generatePrimesProd(int prodId){
 
     pthread_mutex_lock(&putBuffLock);
     if (prodsIn > 0) {
+        pthread_mutex_lock(&buffLock);
+        while (buffer[nextInBuffer] != EMPTY_SPOT){
+            waitBufferFull = 1;
+            pthread_cond_wait(&waitBuff, &buffLock);
+            // cond_wait may accidentally release wait
+        }
         pthread_mutex_lock(&ioLock);
         write_add_to_buf_msg(prodId, n1, n2, prod);
         pthread_mutex_unlock(&ioLock);
 
         add_to_buf(prod);
+        if (waitBufferEmpty == 1){
+            waitBufferEmpty = 0;
+            pthread_cond_signal(&waitBuff);
+        }
+        pthread_mutex_unlock(&buffLock);
+        --prodsIn;
     }
     pthread_mutex_unlock(&putBuffLock);
-
 }
 
 int main(int argc, char* argv[]){
