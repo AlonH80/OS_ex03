@@ -249,7 +249,7 @@ void* producerLoop(){
     pthread_mutex_lock(&assignIdProd);
     int prodId = ++numProducers;
     pthread_mutex_unlock(&assignIdProd);
-    srand(((lluint)time(0) % (lluint)pthread_self()) * prodId);
+    srand(((lluint)time(0) % (int)pthread_self()) * prodId);
 
     while (prodsIn > 0){
         generatePrimesProd(prodId);
